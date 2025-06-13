@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel de Administración</title>
+</head>
+<body>
+  <h2>Panel de Administración</h2>
+  <table id="tablaBoletos">
+    <thead>
+      <tr>
+        <th>Número</th>
+        <th>Estado</th>
+        <th>Nombre</th>
+        <th>Correo</th>
+        <th>Teléfono</th>
+        <th>Formulario</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="pagination">
+    <button onclick="cambiarPagina(-1)">Anterior</button>
+    <span id="paginaActual">1</span>
+    <button onclick="cambiarPagina(1)">Siguiente</button>
+  </div>
+
+<script>
+let pagina = 1;
+const porPagina = 500;
+
+function cargarBoletos(pagina) {
+  fetch(`/boletos?pagina=${pagina}&porPagina=${porPagina}`)
+    .then(res => res.json())
+    .then(data => {
+      const tbody = document.querySelector("#tablaBoletos tbody");
+      tbody.innerHTML = "";
+      data.forEach(boleto => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${boleto.numero}</td>
+          <td>${boleto.estado}</td>
+          <td>${boleto.comprador_nombre || ""}</td>
+          <td>${boleto.comprador_correo || ""}</td>
+          <td>${boleto.comprador_telefono || ""}</td>
+          <td>
+            <input type="text" placeholder="Nombre" id="nombre_${boleto.numero}">
+            <input type="email" placeholder="Correo" id="correo_${boleto.numero}">
+            <input type="text" placeholder="Teléfono" id="telefono_${boleto.numero}">
+          </td>
+          <td>
+            <button onclick="actualizarEstado('${boleto.numero}', 'disponible')">Disponible</button>
+            <button onclick="actualizarEstado('${boleto.numero}', 'vendido')">Vendido</button>
+          </td>
+        `;
+        tbody.appendChild(fila);
+      });
+      document.getElementById("paginaActual").textContent = pagina;
+    });
+}
+
+function cambiarPagina(cambio) {
+  const nueva = pagina + cambio;
+  if (nueva < 1) return;
+  pagina = nueva;
+  cargarBoletos(pagina);
+}
+
+function actualizarEstado(numero, estado) {
+  const nombre = document.getElementById(`nombre_${numero}`)?.value || "";
+  const correo = document.getElementById(`correo_${numero}`)?.value || "";
+  const telefono = document.getElementById(`telefono_${numero}`)?.value || "";
+
+  fetch("/actualizar", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      numero,
+      estado,
+      comprador_nombre: nombre,
+      comprador_correo: correo,
+      comprador_telefono: telefono
+    })
+  })
+  .then(res => res.json())
+  .then(msg => {
+    alert(msg.mensaje || "Actualizado");
+    cargarBoletos(pagina);
+  });
+}
+
+cargarBoletos(pagina);
+</script>
+</body>
+</html>
